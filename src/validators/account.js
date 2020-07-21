@@ -1,18 +1,46 @@
 const Joi = require('@hapi/joi');
 const { getValidatorError } = require('../helpers/validator');
 
+const rules = {
+    email: Joi.string().email().required(),
+    password: Joi.string().pattern(new RegExp('^[a-zA-Z-0-9]{3,30}$')).required(),
+    password_confirmation: Joi.string().valid(Joi.ref('password')).required()
+}
+
+//abortEarly -> Caso esteja false, aborta quando o campo não estiver válido
+const options = {abortEarly: false};
+
+const accountSignIn = (req, res, next) =>{
+    const {email, password} = req.body;
+    
+    const schema = Joi.object({
+        //pattern() é para validar com expressão regular
+        email: rules.email,
+        password: rules.password
+    });
+
+    //abortEarly -> Caso esteja false, aborta quando o campo não estiver válido
+    
+    const { error } = schema.validate({ email, password }, options);
+
+    if(error){
+        const messages = getValidatorError(error, 'account.signin');
+        return res.jsonBadRequest(null, null, { error: messages })
+    }
+    
+    next();
+};
+
 const accountSignUp = (req, res, next) =>{
     const {email, password, password_confirmation} = req.body;
     
     const schema = Joi.object({
         //pattern() é para validar com expressão regular
-        email: Joi.string().email().required(),
-        password: Joi.string().pattern(new RegExp('^[a-zA-Z-0-9]{3,30}$')).required(),
-        password_confirmation: Joi.string().valid(Joi.ref('password')).required(),
+        email: rules.email,
+        password: rules.password,
+        password_confirmation: rules.password_confirmation,
     });
 
-    //abortEarly -> Caso esteja false, aborta quando o campo não estiver válido
-    const options = {abortEarly: false};
     const { error } = schema.validate({ email, password, password_confirmation }, options);
 
     if(error){
@@ -23,4 +51,4 @@ const accountSignUp = (req, res, next) =>{
     next();
 };
 
-module.exports = { accountSignUp };
+module.exports = { accountSignUp, accountSignIn };
